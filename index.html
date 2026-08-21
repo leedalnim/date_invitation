@@ -512,6 +512,34 @@
   .tab-btn:hover { transform: translateY(-1px); }
   .tab-btn.active { background: var(--rose); color: #fff; border-color: var(--rose-dark); }
 
+  /* 분류 필터 — 위쪽 큰 탭과 구분되도록 작고 둥글게 */
+  .filter-row { display: flex; gap: 6px; margin-bottom: 14px; }
+  .filter-btn {
+    flex: 1;
+    font-family: var(--font-body);
+    font-size: 14px;
+    padding: 7px 4px;
+    border: 1px solid rgba(91, 70, 54, 0.35);
+    border-radius: 999px;
+    background: var(--paper);
+    color: var(--ink-soft);
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  }
+  .filter-btn:hover { background: var(--sage-soft); color: var(--ink); }
+  .filter-btn.active {
+    background: var(--sage-soft);
+    border-color: var(--ink);
+    color: var(--ink);
+    font-weight: 700;
+  }
+  .filter-btn .count {
+    font-family: var(--font-display);
+    font-size: 13px;
+    opacity: 0.7;
+    margin-left: 3px;
+  }
+
   /* 노출 슬롯 요약 + 자동 뽑기 */
   .slot-bar {
     display: flex;
@@ -1299,6 +1327,13 @@
 
     <!-- 가볼 곳 / 가본 곳 공통 영역 -->
     <div id="pane-places">
+      <div id="meal-filter" class="filter-row">
+        <button class="filter-btn active" data-filter="all" type="button">전체</button>
+        <button class="filter-btn" data-filter="lunch" type="button">점심</button>
+        <button class="filter-btn" data-filter="snack" type="button">간식</button>
+        <button class="filter-btn" data-filter="dinner" type="button">저녁</button>
+      </div>
+
       <div id="slot-bar" class="slot-bar">
         <span id="slot-text" class="slot-text"></span>
         <button id="btn-auto-pick" class="btn-mini primary" type="button">🎲 이번 후보 뽑기</button>
@@ -1352,7 +1387,14 @@
     <div id="pane-course" style="display:none;">
       <p class="manage-sub" style="margin-bottom:12px;">점심과 저녁 사이에 항상 들어가는 코스예요.</p>
       <div id="course-list-manage" class="place-list"></div>
-      <div class="form-row" style="margin-top:10px;">
+      <div class="form-row" style="margin-top:14px;">
+        <label class="form-label" for="course-pick">담아둔 맛집에서 고르기</label>
+        <select id="course-pick" class="form-input">
+          <option value="">— 목록에서 선택 —</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label class="form-label" for="course-new-input">직접 적기</label>
         <div class="photo-row">
           <input id="course-new-input" class="form-input" type="text" maxlength="30" placeholder="예) 서점 구경">
           <button id="btn-course-add" class="btn-mini primary" type="button">추가</button>
@@ -2036,6 +2078,7 @@
   // ===================================================================
 
   var currentTab = 'todo';
+  var mealFilter = 'all';   // 'all' | 'lunch' | 'snack' | 'dinner'
   var editingId = null;
   // 사진 축소는 비동기라, 그 사이 폼이 바뀌면 엉뚱한 맛집에 사진이 붙는다.
   // 폼을 열고 닫을 때마다 번호를 올려 지난 작업의 결과를 버린다.
@@ -2102,6 +2145,7 @@
     });
 
     savePlaces();
+    renderMealFilter();
     renderPlaceList();
     renderSlotBar();
     renderAllMenus();
@@ -2125,6 +2169,7 @@
       place.shown = true;
     }
     savePlaces();
+    renderMealFilter();
     renderPlaceList();
     renderSlotBar();
     renderAllMenus();
@@ -2148,17 +2193,47 @@
     return 'https://map.naver.com/p/search/' + encodeURIComponent(name);
   }
 
+  function matchesFilter(place) {
+    if (mealFilter === 'all') return true;
+    return mealsOf(place).indexOf(mealFilter) !== -1;
+  }
+
+  // 필터 버튼에 현재 탭 기준 개수를 같이 보여준다
+  function renderMealFilter() {
+    var wantDone = currentTab === 'done';
+    var inTab = places.filter(function (p) { return !!p.visited === wantDone; });
+    var btns = $('meal-filter').querySelectorAll('.filter-btn');
+
+    for (var i = 0; i < btns.length; i++) {
+      var key = btns[i].getAttribute('data-filter');
+      var n = (key === 'all')
+        ? inTab.length
+        : inTab.filter(function (p) { return mealsOf(p).indexOf(key) !== -1; }).length;
+
+      btns[i].classList.toggle('active', key === mealFilter);
+      btns[i].innerHTML = btns[i].getAttribute('data-label') +
+        '<span class="count">' + n + '</span>';
+    }
+  }
+
   function renderPlaceList() {
     placeListEl.innerHTML = '';
     var wantDone = currentTab === 'done';
-    var list = places.filter(function (p) { return !!p.visited === wantDone; });
+    var list = places.filter(function (p) {
+      return !!p.visited === wantDone && matchesFilter(p);
+    });
 
     if (!list.length) {
       var note = document.createElement('p');
       note.className = 'empty-note';
-      note.innerHTML = wantDone
-        ? '아직 다녀온 곳이 없어요.<br>코스를 전송하면 여기로 옮겨져요.'
-        : '가고 싶은 곳을 담아보세요.<br>지금 안 뽑혀도 계속 남아 있어요.';
+      if (mealFilter !== 'all') {
+        note.innerHTML = mealLabel(mealFilter) + ' 으로 담아둔 곳이 없어요.<br>' +
+                         '아래에서 추가하거나 <b>전체</b> 를 눌러 보세요.';
+      } else {
+        note.innerHTML = wantDone
+          ? '아직 다녀온 곳이 없어요.<br>코스를 전송하면 여기로 옮겨져요.'
+          : '가고 싶은 곳을 담아보세요.<br>지금 안 뽑혀도 계속 남아 있어요.';
+      }
       placeListEl.appendChild(note);
       return;
     }
@@ -2267,7 +2342,42 @@
     });
   }
 
+  // 고정 코스에 넣을 후보를 담아둔 맛집에서 가져온다 (간식을 점심·저녁 사이에 넣을 때 등)
+  function renderCoursePicker() {
+    var sel = $('course-pick');
+    var already = {};
+    course.forEach(function (stop) { already[stop.name] = true; });
+
+    sel.innerHTML = '';
+    var head = document.createElement('option');
+    head.value = '';
+    head.textContent = '— 목록에서 선택 —';
+    sel.appendChild(head);
+
+    var byMeal = { snack: [], lunch: [], dinner: [], both: [] };
+    places.forEach(function (place) {
+      if (already[place.name]) return;   // 이미 코스에 있으면 빼둔다
+      (byMeal[place.meal === 'etc' ? 'snack' : place.meal] || byMeal.both).push(place);
+    });
+
+    [['snack', '간식'], ['lunch', '점심'], ['dinner', '저녁'], ['both', '점심·저녁']]
+      .forEach(function (entry) {
+        var list = byMeal[entry[0]];
+        if (!list.length) return;
+        var group = document.createElement('optgroup');
+        group.label = entry[1];
+        list.forEach(function (place) {
+          var opt = document.createElement('option');
+          opt.value = place.name;
+          opt.textContent = place.name;
+          group.appendChild(opt);
+        });
+        sel.appendChild(group);
+      });
+  }
+
   function renderCourseManage() {
+    renderCoursePicker();
     var wrap = $('course-list-manage');
     wrap.innerHTML = '';
     course.forEach(function (stop, index) {
@@ -2438,6 +2548,7 @@
     places = places.filter(function (p) { return p.id !== place.id; });
     savePlaces();
     closeForm();
+    renderMealFilter();
     renderPlaceList();
     renderSlotBar();
     renderAllMenus();
@@ -2460,6 +2571,7 @@
       tabs[i].classList.toggle('active', tabs[i].getAttribute('data-tab') === 'todo');
     }
     $('slot-bar').style.display = 'flex';
+    renderMealFilter();
     renderPlaceList();
     renderSlotBar();
     renderAllMenus();
@@ -2501,6 +2613,7 @@
 
     savePlaces();
     closeForm();
+    renderMealFilter();
     renderPlaceList();
     renderSlotBar();
     renderAllMenus();
@@ -2529,12 +2642,38 @@
     } else {
       // 가본 곳 탭에서는 슬롯 요약이 의미가 없어 감춘다
       $('slot-bar').style.display = currentTab === 'done' ? 'none' : 'flex';
+      renderMealFilter();
       renderPlaceList();
       renderSlotBar();
     }
   });
 
+  // 버튼 글자를 개수와 함께 다시 그리므로 원래 이름을 속성에 보관해 둔다
+  (function () {
+    var btns = $('meal-filter').querySelectorAll('.filter-btn');
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].setAttribute('data-label', btns[i].textContent.trim());
+    }
+  })();
+
+  $('meal-filter').addEventListener('click', function (e) {
+    var btn = e.target.closest('.filter-btn');
+    if (!btn) return;
+    mealFilter = btn.getAttribute('data-filter');
+    closeForm();
+    renderMealFilter();
+    renderPlaceList();
+  });
+
   $('btn-auto-pick').addEventListener('click', autoPick);
+
+  $('course-pick').addEventListener('change', function () {
+    if (!this.value) return;
+    var input = $('course-new-input');
+    input.value = this.value;   // 바로 넣지 않고 채워만 둔다. '루루당 (간식)' 처럼 고쳐 넣을 수 있게.
+    this.value = '';
+    input.focus();
+  });
 
   $('btn-course-add').addEventListener('click', function () {
     var input = $('course-new-input');
@@ -2550,6 +2689,7 @@
     // 미리보기 도중 이 링크로 빠져나가면 미리보기가 켜진 채로 남아
     // 이후 진짜 전송이 기록되지 않는다
     if (previewMode) setPreviewMode(false);
+    renderMealFilter();
     renderPlaceList();
     renderSlotBar();
     showScreen('manage');
@@ -2610,6 +2750,7 @@
     setPreviewMode(false);
     resetOrder();
     resetShareButtons();
+    renderMealFilter();
     renderPlaceList();
     renderSlotBar();
     showScreen('manage');
