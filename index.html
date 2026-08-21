@@ -763,6 +763,19 @@
   .radio-chip.active { background: var(--rose); color: #fff; border-color: var(--rose-dark); }
   .form-btn-row { display: flex; gap: 8px; margin-top: 12px; }
   .form-btn-row .btn-mini { flex: 1; }
+  .form-danger {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed rgba(91, 70, 54, 0.25);
+  }
+  .form-danger .btn-mini { flex: 1; min-width: 120px; font-size: 13px; }
+  .btn-danger { color: var(--rose-dark); border-color: var(--rose-dark); }
+  .btn-danger:hover { background: var(--rose-soft); }
+  .btn-unvisit:hover { background: var(--sage-soft); }
+
   .photo-preview {
     width: 54px;
     height: 54px;
@@ -1084,6 +1097,12 @@
           <button id="btn-form-cancel" class="btn-mini" type="button">취소</button>
           <button id="btn-form-save" class="btn-mini primary" type="button">저장</button>
         </div>
+
+        <div id="form-danger" class="form-danger" style="display:none;">
+          <button id="btn-form-unvisit" class="btn-mini btn-unvisit" type="button"
+                  style="display:none;">↩ 안 간 걸로 되돌리기</button>
+          <button id="btn-form-delete" class="btn-mini btn-danger" type="button">🗑 목록에서 삭제</button>
+        </div>
       </div>
     </div>
 
@@ -1123,8 +1142,9 @@
 <!-- 카카오톡 공유 SDK. KAKAO_JS_KEY 를 채워야 실제로 켜집니다.
      참고: 외부 스크립트가 차단되는 환경(Claude 산출물 게시 등)에서는 로드되지 않으며,
      그 경우 아래 스크립트가 알아서 카카오 버튼을 숨기고 기본 공유/복사로 넘어갑니다. -->
-<!-- integrity 값은 Kakao Developers 문서(개발가이드 > JavaScript SDK)에 있는 최신 스니펫을
-     그대로 복사해 붙여넣으세요. 값이 틀리면 SDK가 통째로 차단됩니다. -->
+<!-- integrity 속성은 일부러 넣지 않았습니다. 추가하려면 Kakao Developers 문서
+     (개발가이드 > JavaScript SDK)의 최신 스니펫에 적힌 값을 그대로 복사해 붙여넣으세요.
+     값이 틀리면 SDK가 통째로 차단되므로 임의로 만들어 넣으면 안 됩니다. -->
 <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js" crossorigin="anonymous"></script>
 
 <script>
@@ -1297,12 +1317,19 @@
   var places = [];
   var course = [];
 
+  // 링크는 http/https 만 허용한다. 가져오기로 들어온 JSON 에 javascript: 같은
+  // 주소가 섞여 있으면 눌렀을 때 그대로 실행되므로 여기서 걸러낸다.
+  function safeUrl(url) {
+    var trimmed = String(url || '').trim();
+    return /^https?:\/\//i.test(trimmed) ? trimmed : '';
+  }
+
   function normalizePlace(raw) {
     return {
       id: raw.id || makeId(),
       name: String(raw.name || '').trim(),
       meal: (raw.meal === 'dinner' || raw.meal === 'both') ? raw.meal : 'lunch',
-      mapUrl: raw.mapUrl || '',
+      mapUrl: safeUrl(raw.mapUrl),
       note: raw.note || '',
       photo: raw.photo || '',
       visited: !!raw.visited,
@@ -1344,8 +1371,9 @@
       savePlaces();
     }
 
+    // 빈 배열도 '사용자가 전부 지운 상태'로 존중한다 (length 검사를 하면 기본값이 되살아난다)
     var storedCourse = safeRead(COURSE_KEY);
-    course = (storedCourse && storedCourse.length)
+    course = Array.isArray(storedCourse)
       ? storedCourse.map(normalizeStop)
       : DEFAULT_COURSE.map(function (name) { return { name: name, on: true }; });
   }
@@ -1537,7 +1565,11 @@
     return '';
   }
 
+  // 결과 링크로 받은 코스. 내 고정 코스와 섞이면 안 되므로 따로 보관한다.
+  var receivedCourse = null;
+
   function activeCourseStops() {
+    if (receivedCourse) return receivedCourse.slice();
     return course.filter(function (stop) { return stop.on; })
                  .map(function (stop) { return stop.name; });
   }
@@ -1620,12 +1652,20 @@
     // 미리보기로 눌러본 것까지 다녀온 걸로 기록되면 안 된다
     if (previewMode) return;
 
+    var chosenIds = {};
     ['lunch', 'dinner'].forEach(function (meal) {
       var choice = order[meal];
-      var chosenId = (choice && choice.type === 'venue') ? choice.id : null;
+      if (choice && choice.type === 'venue') chosenIds[choice.id] = true;
+    });
 
+    // '점심·저녁' 맛집은 두 끼니 목록에 모두 들어 있으므로 한 번만 센다
+    var counted = {};
+    ['lunch', 'dinner'].forEach(function (meal) {
       shownFor(meal).forEach(function (place) {
-        if (place.id === chosenId) {
+        if (counted[place.id]) return;
+        counted[place.id] = true;
+
+        if (chosenIds[place.id]) {
           place.visited = true;
           place.lastVisitedAt = todayStamp();
           place.passCount = 0;
@@ -1653,6 +1693,9 @@
 
   var currentTab = 'todo';
   var editingId = null;
+  // 사진 축소는 비동기라, 그 사이 폼이 바뀌면 엉뚱한 맛집에 사진이 붙는다.
+  // 폼을 열고 닫을 때마다 번호를 올려 지난 작업의 결과를 버린다.
+  var formSession = 0;
   var formMeal = 'lunch';
   var formPhoto = '';
 
@@ -1691,9 +1734,17 @@
     // 모든 노출을 끄고, 밀린 순서대로 슬롯을 다시 채운다
     places.forEach(function (p) { p.shown = false; });
 
+    // '점심·저녁' 맛집은 두 칸을 동시에 차지하므로 끼니별로 따로 세면 한도를 넘는다
+    var used = { lunch: 0, dinner: 0 };
     ['lunch', 'dinner'].forEach(function (meal) {
-      var picked = sortForPicking(pickablePool(meal)).slice(0, SLOT_LIMIT[meal]);
-      picked.forEach(function (p) { p.shown = true; });
+      sortForPicking(pickablePool(meal)).forEach(function (place) {
+        if (place.shown) return;
+        var meals = place.meal === 'both' ? ['lunch', 'dinner'] : [place.meal];
+        var fits = meals.every(function (m) { return used[m] < SLOT_LIMIT[m]; });
+        if (!fits) return;
+        place.shown = true;
+        meals.forEach(function (m) { used[m] += 1; });
+      });
     });
 
     savePlaces();
@@ -1955,6 +2006,7 @@
   }
 
   function openForm(place) {
+    formSession += 1;
     editingId = place ? place.id : null;
     formName.value = place ? place.name : '';
     formMap.value = place ? place.mapUrl : '';
@@ -1962,6 +2014,10 @@
     setFormMeal(place ? place.meal : (currentTab === 'done' ? 'lunch' : 'lunch'));
     setFormPhoto(place ? place.photo : '');
     formPhotoInput.value = '';
+    // 새로 추가할 때는 삭제/되돌리기가 의미 없다
+    $('form-danger').style.display = place ? 'flex' : 'none';
+    $('btn-form-unvisit').style.display = (place && place.visited) ? 'block' : 'none';
+
     placeFormEl.style.display = 'block';
     $('btn-add-place').style.display = 'none';
     // 목록이 길면 폼이 화면 밖에 생기므로 보이는 곳까지 끌어온다
@@ -1970,6 +2026,7 @@
   }
 
   function closeForm() {
+    formSession += 1;
     editingId = null;
     placeFormEl.style.display = 'none';
     $('btn-add-place').style.display = '';
@@ -2002,12 +2059,52 @@
   formPhotoInput.addEventListener('change', function () {
     var file = this.files && this.files[0];
     if (!file) return;
-    downscaleImage(file, 200, setFormPhoto);
+    var mySession = formSession;
+    downscaleImage(file, 200, function (dataUrl) {
+      if (mySession !== formSession) return; // 그 사이 다른 맛집으로 넘어갔다면 버린다
+      setFormPhoto(dataUrl);
+    });
   });
 
   $('form-meal-row').addEventListener('click', function (e) {
     var chip = e.target.closest('.radio-chip');
     if (chip) setFormMeal(chip.getAttribute('data-meal'));
+  });
+
+  $('btn-form-delete').addEventListener('click', function () {
+    var place = placeById(editingId);
+    if (!place) return;
+    if (!confirm('"' + place.name + '" 을(를) 목록에서 완전히 지울까요?\n밀린 기록도 같이 사라져요.')) return;
+
+    places = places.filter(function (p) { return p.id !== place.id; });
+    savePlaces();
+    closeForm();
+    renderPlaceList();
+    renderSlotBar();
+    renderAllMenus();
+    toast('"' + place.name + '" 을(를) 지웠어요.');
+  });
+
+  // 실수로 전송했을 때 '가본 곳'에서 다시 '가볼 곳'으로 되돌린다
+  $('btn-form-unvisit').addEventListener('click', function () {
+    var place = placeById(editingId);
+    if (!place) return;
+
+    place.visited = false;
+    place.lastVisitedAt = null;
+    place.revisit = true;
+    savePlaces();
+    closeForm();
+    currentTab = 'todo';
+    var tabs = document.querySelectorAll('.tab-btn');
+    for (var i = 0; i < tabs.length; i++) {
+      tabs[i].classList.toggle('active', tabs[i].getAttribute('data-tab') === 'todo');
+    }
+    $('slot-bar').style.display = 'flex';
+    renderPlaceList();
+    renderSlotBar();
+    renderAllMenus();
+    toast('"' + place.name + '" 을(를) 가볼 곳으로 되돌렸어요.');
   });
 
   $('btn-add-place').addEventListener('click', function () { openForm(null); });
@@ -2026,14 +2123,14 @@
       var place = placeById(editingId);
       place.name = name;
       place.meal = formMeal;
-      place.mapUrl = formMap.value.trim();
+      place.mapUrl = safeUrl(formMap.value);
       place.note = formNote.value.trim();
       place.photo = formPhoto;
     } else {
       places.push(normalizePlace({
         name: name,
         meal: formMeal,
-        mapUrl: formMap.value.trim(),
+        mapUrl: safeUrl(formMap.value),
         note: formNote.value.trim(),
         photo: formPhoto,
         visited: currentTab === 'done',
@@ -2091,6 +2188,9 @@
   });
 
   $('btn-open-manage').addEventListener('click', function () {
+    // 미리보기 도중 이 링크로 빠져나가면 미리보기가 켜진 채로 남아
+    // 이후 진짜 전송이 기록되지 않는다
+    if (previewMode) setPreviewMode(false);
     renderPlaceList();
     renderSlotBar();
     showScreen('manage');
@@ -2162,6 +2262,8 @@
         if (!confirm('지금 목록을 파일 내용으로 덮어쓸까요?')) return;
         places = data.places.map(normalizePlace);
         if (data.course && data.course.length) course = data.course.map(normalizeStop);
+        // 폼이 열려 있었다면 editingId 가 사라진 맛집을 가리키게 되므로 닫는다
+        closeForm();
         savePlaces();
         saveCourse();
         renderPlaceList();
@@ -2225,9 +2327,8 @@
       var payload = JSON.parse(decodeURIComponent(escape(atob(hash.slice(3)))));
       order.lunch = payload.l || null;
       order.dinner = payload.d || null;
-      if (payload.c && payload.c.length) {
-        course = payload.c.map(function (name) { return { name: name, on: true }; });
-      }
+      // 내 course 를 건드리지 않는다. 덮어쓰면 이후 저장 시 내 고정 코스가 사라진다.
+      receivedCourse = (payload.c && payload.c.length) ? payload.c.slice() : null;
       renderCourseList(finalCourseList, buildCourseList());
       showScreen('final');
       return true;
@@ -2355,6 +2456,7 @@
 
   $('btn-restart').addEventListener('click', function () {
     resetOrder();
+    receivedCourse = null;
     resetShareButtons();
     if (location.hash) {
       history.replaceState(null, '', location.pathname + location.search);
@@ -2383,6 +2485,13 @@
   loadData();
   setPreviewMode(false);
   decorateStaticButtons();
+
+  // 페이지를 이미 열어둔 상태에서 결과 링크를 누르면 해시만 바뀌고 새로고침이
+  // 일어나지 않는다. 그때도 코스가 보이도록 해시 변경을 직접 듣는다.
+  window.addEventListener('hashchange', function () {
+    if (previewMode) setPreviewMode(false);
+    restoreFromUrl();
+  });
   renderAllMenus();
   renderCourseManage();
   resetShareButtons();
