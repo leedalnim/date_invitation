@@ -68,26 +68,31 @@ var SLOT_LIMIT = { lunch: 5, dinner: 4 };
 
 ## 폰트
 
-두 벌이 준비되어 있고, 기본값은 **메모멘트 꾹꾹**입니다.
+두 벌이 준비되어 있고, 기본값은 **오뮤 다예쁨체**입니다.
 
-| 폰트 | 어디서 오나 | 특징 |
+| 폰트 | 배포 | 비고 |
 | --- | --- | --- |
-| `Memoment Kkukkuk` | `fonts/MemomentKkukkuk.woff2` (저장소에 포함) | 손글씨체. 인터넷 없이도 뜸. 2.3MB |
-| `CookieRun` | jsdelivr CDN | 둥근 서체. 외부 CDN 이라 막힌 환경에서는 안 뜸 |
+| `OmuDaye` (오뮤 다예쁨체) | 눈누 → jsdelivr CDN | 기본값. 동글동글한 손글씨 |
+| `CookieRun` (쿠키런) | 눈누 → jsdelivr CDN | 400 / 700 / 900 |
 
 바꾸려면 `index.html` 의 `:root` 에서 두 줄의 **맨 앞 글꼴 이름만** 바꾸면 됩니다.
 
 ```css
---font-display: 'CookieRun', 'Memoment Kkukkuk', 'Gaegu', cursive;
---font-body:    'CookieRun', 'Memoment Kkukkuk', 'Gowun Dodum', sans-serif;
+--font-display: 'CookieRun', 'Gaegu', cursive;
+--font-body:    'CookieRun', 'Gowun Dodum', sans-serif;
 ```
 
-메모멘트 꾹꾹은 원본 5.2MB TTF 를 woff2 로 변환한 것입니다. 한글 손글씨라 글자마다
-점이 많아 상용 2350자만 남겨도 15% 밖에 줄지 않아, 글자가 빠지는 위험을 피하려고
-전체를 담았습니다. 셋 다 `font-display: swap` 이라 폰트를 받는 동안에도 글씨는 바로 보입니다.
+두 서체를 대체 목록에 함께 넣지는 마세요. 주 폰트에 없는 글자가 나올 때마다
+나머지 폰트 파일까지 내려받게 됩니다.
 
-폰트 저작권은 각 배포처(메모멘트 꾹꾹 = WISEFONT, 쿠키런 = 데브시스터즈)에 있습니다.
-웹사이트에 올려 배포하는 형태이므로 각 라이선스의 웹 임베딩 조건을 확인하고 쓰세요.
+둘 다 외부 CDN 에서 받아오므로 인터넷이 없거나 외부 요청이 막힌 환경에서는
+대체 글꼴(Gaegu / 고운돋움)로 표시됩니다. 셋 다 `font-display: swap` 이라
+폰트를 받는 동안에도 글씨는 바로 보입니다.
+
+> 폰트를 저장소에 직접 담는 방식은 쓰지 않습니다. 서체마다 **웹폰트 임베딩과
+> 파일 재배포를 금지**하는 경우가 있어서, 배포처가 제공하는 웹폰트 링크를
+> 그대로 쓰는 편이 안전합니다. 다른 서체로 바꿀 때도 그 서체의 라이선스에서
+> 웹폰트 사용이 허용되는지 확인하세요.
 
 ## 아이콘
 

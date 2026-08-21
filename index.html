@@ -16,26 +16,23 @@
 <noscript><link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Gowun+Dodum&display=swap" rel="stylesheet"></noscript>
 <style>
   /* ===================== 폰트 =====================
-     두 벌이 준비되어 있다. 바꾸려면 아래 :root 의 --font-display / --font-body
-     두 줄에서 맨 앞 글꼴 이름만 갈아끼우면 된다.
+     두 벌이 준비되어 있고 기본값은 오뮤 다예쁨체입니다. 바꾸려면 아래 :root 의
+     --font-display / --font-body 두 줄에서 맨 앞 글꼴 이름만 갈아끼우면 됩니다.
 
-       'Memoment Kkukkuk'  손글씨체. 저장소에 직접 담아 인터넷 없이도 뜬다.
-       'CookieRun'         둥글둥글한 서체. 외부 CDN(jsdelivr)에서 받아온다.
+       'OmuDaye'    오뮤 다예쁨체 — 동글동글한 손글씨
+       'CookieRun'  쿠키런
 
-     둘 다 font-display: swap 이라 폰트가 오는 동안에도 글씨가 먼저 보인다. */
+     둘 다 눈누(projectnoonnu) 배포본을 jsdelivr CDN 에서 받아옵니다. 외부 CDN 이라
+     인터넷이 없거나 외부 요청이 막힌 환경에서는 아래 대체 글꼴로 표시됩니다.
+     font-display: swap 이라 폰트를 받는 동안에도 글씨는 바로 보입니다. */
 
-  /* 메모멘트 꾹꾹 (WISEFONT). 5.2MB TTF 를 woff2 로 변환해 담았다.
-     한글 손글씨라 글자마다 점이 많아 서브셋해도 거의 안 줄어들어 전체를 넣었다. */
   @font-face {
-    font-family: 'Memoment Kkukkuk';
-    src: url('fonts/MemomentKkukkuk.woff2') format('woff2');
-    font-weight: 400 700;
-    font-style: normal;
+    font-family: 'OmuDaye';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2304-01@1.0/omyu_pretty.woff2') format('woff2');
+    font-weight: normal;
     font-display: swap;
   }
 
-  /* 쿠키런 (눈누 배포본). 외부 CDN 을 쓰므로 인터넷이 없거나
-     외부 스크립트가 막힌 환경(Claude 산출물 게시 등)에서는 뜨지 않는다. */
   @font-face {
     font-family: 'CookieRun';
     src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/CookieRun-Regular.woff') format('woff');
@@ -69,10 +66,12 @@
     --tape-blue: #A9C8C0;
     --shadow: rgba(91, 70, 54, 0.18);
 
-    /* ▼ 폰트를 바꾸려면 맨 앞 이름만 'CookieRun' 으로 교체하세요.
-         뒤쪽은 폰트가 아직 안 왔을 때 쓰일 대체 글꼴입니다. */
-    --font-display: 'Memoment Kkukkuk', 'CookieRun', 'Gaegu', cursive;
-    --font-body: 'Memoment Kkukkuk', 'CookieRun', 'Gowun Dodum', sans-serif;
+    /* ▼ 폰트를 바꾸려면 'OmuDaye' 를 'CookieRun' 으로 바꾸세요.
+         쿠키런을 대체 목록에 같이 넣지는 않습니다. 넣어두면 주 폰트에 없는
+         글자가 나올 때마다 쿠키런 파일까지 내려받아 헛된 통신이 생깁니다.
+         뒤쪽 Gaegu / 고운돋움은 폰트가 아직 안 왔을 때 쓰일 대체 글꼴입니다. */
+    --font-display: 'OmuDaye', 'Gaegu', cursive;
+    --font-body: 'OmuDaye', 'Gowun Dodum', sans-serif;
     --card-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
     --card-rotate: -1.4deg;
     --card-border-width: 2px;
