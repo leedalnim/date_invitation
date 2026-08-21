@@ -1412,7 +1412,8 @@
 <!-- integrity 속성은 일부러 넣지 않았습니다. 추가하려면 Kakao Developers 문서
      (개발가이드 > JavaScript SDK)의 최신 스니펫에 적힌 값을 그대로 복사해 붙여넣으세요.
      값이 틀리면 SDK가 통째로 차단되므로 임의로 만들어 넣으면 안 됩니다. -->
-<script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js" defer crossorigin="anonymous"></script>
+<!-- 카카오톡 버튼을 쓸 때만 주석을 푸세요. KAKAO_JS_KEY 도 함께 채워야 합니다. -->
+<!-- <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js" defer crossorigin="anonymous"></script> -->
 
 <script>
 (function () {
@@ -1423,7 +1424,11 @@
   // 카카오톡 공유 버튼을 켜려면 아래에 Kakao Developers 의 JavaScript 키를 넣으세요.
   // (앱 등록 후 [플랫폼 > Web > 사이트 도메인]에 이 페이지 주소를 반드시 등록해야 동작합니다)
   // 비워두면 카카오 버튼은 자동으로 숨겨지고, 기본 공유/복사만 사용합니다.
-  var KAKAO_JS_KEY = 'c651c0d114ec9b26c2e1aa7a5c10331f';
+  // 비워두면 카카오톡 버튼이 뜨지 않고 기본 공유·복사만 쓴다.
+  // 다시 켜려면 Kakao Developers 의 JavaScript 키를 넣고,
+  // 플랫폼 > Web > 사이트 도메인에 https://leedalnim.github.io 를 등록하세요.
+  // var KAKAO_JS_KEY = 'c651c0d114ec9b26c2e1aa7a5c10331f';
+  var KAKAO_JS_KEY = '';
 
   // 아이콘 — itshover (https://github.com/itshover/itshover, Apache-2.0) 의 아이콘을
   // React/motion 없이 순수 SVG + CSS 로 옮긴 것. 움직임은 위쪽 @keyframes 에 있고,
