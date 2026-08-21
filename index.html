@@ -253,13 +253,25 @@
   /* 장소 확인 화면 */
   .venue-map-link {
     display: none;
-    font-family: var(--font-body);
-    font-size: 13px;
-    color: var(--ink-soft);
-    text-decoration: underline;
-    margin: -14px 0 22px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin: -12px auto 24px;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 14px;
+    padding: 9px 18px;
+    border: 2px solid var(--ink);
+    border-radius: var(--menu-radius);
+    background: var(--sage-soft);
+    color: var(--ink);
+    text-decoration: none;
+    box-shadow: var(--menu-shadow);
+    transition: transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease;
   }
-  .venue-map-link:hover { color: var(--rose); }
+  .venue-map-link:hover { transform: translateY(-2px); background: var(--rose-soft); }
+  .venue-map-link:active { transform: scale(0.96); box-shadow: none; }
+  .venue-map-link .icon-img { vertical-align: 0; }
 
   /* 전송 확인 / 최종 화면 요약 줄 */
   .course-list {
@@ -313,17 +325,29 @@
     transition: border-color 0.4s ease;
   }
   .etc-input:focus { outline: none; border-color: var(--rose); }
+  /* 되돌아가기 버튼 — .btn-ghost 와 같은 생김새의 작은 버전 */
   .btn-text-back {
-    display: block;
-    margin: 14px auto 0;
-    background: none;
-    border: none;
-    font-family: var(--font-body);
-    font-size: 13px;
-    color: var(--ink-soft);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin: 16px auto 0;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 14px;
+    padding: 9px 18px;
+    border: 2px solid var(--ink);
+    border-radius: var(--menu-radius);
+    background: var(--paper);
+    color: var(--ink);
     cursor: pointer;
+    box-shadow: var(--menu-shadow);
+    transition: transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease;
   }
-  .btn-text-back:hover { color: var(--rose); }
+  .btn-text-back:hover { transform: translateY(-2px); background: var(--rose-soft); }
+  .btn-text-back:active { transform: scale(0.96); box-shadow: none; }
+  /* 가운데 정렬을 위해 감싸는 줄 */
+  .back-row { display: flex; justify-content: center; }
   .btn-share {
     display: block;
     width: 100%;
@@ -798,19 +822,45 @@
   }
   .data-tools .btn-mini { flex: 1; min-width: 96px; font-size: 13px; }
 
-  /* 랜딩의 관리 화면 진입 링크 */
-  .manage-entry {
-    display: block;
-    margin: 18px auto 0;
-    background: none;
-    border: none;
-    font-family: var(--font-body);
-    font-size: 12px;
-    color: var(--ink-soft);
+  /* ===== 공통 보조 버튼 =====
+     예전에는 밑줄 텍스트라 눌러야 하는지 알기 어려웠다. 테두리와 그림자를 줘서
+     주 버튼(.btn)보다는 약하되 확실히 버튼으로 보이게 한다. */
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 16px;
+    padding: 11px 22px;
+    border: 2px solid var(--ink);
+    border-radius: var(--menu-radius);
+    background: var(--paper);
+    color: var(--ink);
     cursor: pointer;
-    text-decoration: underline;
+    box-shadow: var(--menu-shadow);
+    transition: transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease;
   }
-  .manage-entry:hover { color: var(--rose); }
+  .btn-ghost:hover { transform: translateY(-2px); background: var(--rose-soft); }
+  .btn-ghost:active { transform: scale(0.96); box-shadow: none; }
+  .btn-ghost .icon-img { vertical-align: 0; }
+  .btn-ghost-sm { font-size: 14px; padding: 9px 18px; gap: 6px; }
+
+  /* 카드 바깥, 페이지 최하단에 고정되는 영역 */
+  .page-footer {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: none;
+    justify-content: center;
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+    z-index: 6;
+    pointer-events: none;
+  }
+  .page-footer.show { display: flex; }
+  .page-footer > * { pointer-events: auto; }
 
   /* 공유 관련 */
   .btn-kakao {
@@ -930,8 +980,12 @@
     <div class="button-row">
       <button id="btn-like" class="btn btn-like" type="button">좋아</button>
     </div>
-    <button id="btn-open-manage" class="manage-entry" type="button">🍽 맛집 관리하기</button>
   </div>
+</div>
+
+<!-- 카드 바깥, 페이지 최하단 (랜딩에서만 보임) -->
+<div id="page-footer" class="page-footer">
+  <button id="btn-open-manage" class="btn-ghost" type="button">맛집 관리</button>
 </div>
 
 <!-- 2. 점심 메뉴 화면 -->
@@ -1009,7 +1063,9 @@
     <h2 class="title-small">오늘의 코스, 이대로 보낼까요?</h2>
     <ol id="review-course-list" class="course-list"></ol>
     <button id="btn-review-send" class="btn btn-like" type="button" style="margin-top:10px;">전송하기</button>
-    <button id="btn-review-back" class="btn-text-back" type="button">← 메뉴 다시 고르기</button>
+    <div class="back-row">
+      <button id="btn-review-back" class="btn-text-back" type="button">← 메뉴 다시 고르기</button>
+    </div>
   </div>
 </div>
 
@@ -1021,7 +1077,9 @@
     <h2 id="etc-title" class="title-small">어떤 게 좋을까요?</h2>
     <textarea id="etc-input" class="etc-input" placeholder="편하게 적어주세요 :)" maxlength="200" rows="3"></textarea>
     <button id="btn-etc-send" class="btn btn-like" type="button">보내기</button>
-    <button id="btn-etc-back" class="btn-text-back" type="button">← 메뉴로</button>
+    <div class="back-row">
+      <button id="btn-etc-back" class="btn-text-back" type="button">← 메뉴로</button>
+    </div>
   </div>
 </div>
 
@@ -1434,6 +1492,8 @@
     if (screens[name].classList.contains('screen-scroll')) {
       screens[name].scrollTop = 0;
     }
+    // 관리 진입 버튼은 카드 바깥 최하단에 있고, 랜딩에서만 보인다
+    $('page-footer').classList.toggle('show', name === 'landing');
   }
 
   // ===================================================================
@@ -1550,7 +1610,7 @@
     venueTitleEl.textContent = place.name + ' 갈래?';
     if (place.mapUrl) {
       venueMapLink.href = place.mapUrl;
-      venueMapLink.style.display = 'inline-block';
+      venueMapLink.style.display = 'inline-flex';
     } else {
       venueMapLink.style.display = 'none';
     }
@@ -2473,7 +2533,9 @@
     [
       ['btn-auto-pick', 'shuffle', '이번 후보 뽑기'],
       ['btn-export', 'download', '내보내기'],
-      ['btn-import', 'upload', '가져오기']
+      ['btn-import', 'upload', '가져오기'],
+      ['btn-open-manage', 'noPhoto', '맛집 관리'],
+      ['venue-map-link', 'map', '지도에서 보기']
     ].forEach(function (entry) {
       var el = $(entry[0]);
       if (!el) return;
@@ -2497,7 +2559,8 @@
   resetShareButtons();
   showShareWarning();
   initKakao();
-  restoreFromUrl();
+  // 첫 화면도 showScreen 을 거치게 한다. 그래야 하단 버튼 같은 화면별 상태가 맞춰진다.
+  if (!restoreFromUrl()) showScreen('landing');
 })();
 </script>
 
