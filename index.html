@@ -1663,6 +1663,17 @@
 
   function loadData() {
     var storedPlaces = safeRead(STORAGE_KEY);
+
+    // 발행본이 이 기기의 저장분보다 최신이면 갈아끼운다.
+    // 이게 없으면 한 번 열어본 사람은 예전 목록에 영원히 갇힌다.
+    var publishedAt = (PUBLISHED_DATA && PUBLISHED_DATA.publishedAt) || 0;
+    if (publishedAt > localStamp && PUBLISHED_DATA.places && PUBLISHED_DATA.places.length) {
+      storedPlaces = null;
+      localStamp = publishedAt;
+      safeWrite(STAMP_KEY, localStamp);
+      safeWrite(COURSE_KEY, null);
+    }
+
     if (storedPlaces && storedPlaces.length) {
       places = storedPlaces.map(normalizePlace);
     } else if (PUBLISHED_DATA && PUBLISHED_DATA.places && PUBLISHED_DATA.places.length) {
@@ -1678,7 +1689,10 @@
 
     // 빈 배열도 '사용자가 전부 지운 상태'로 존중한다 (length 검사를 하면 기본값이 되살아난다)
     var storedCourse = safeRead(COURSE_KEY);
-    if (Array.isArray(storedCourse)) {
+    if (publishedAt >= localStamp && PUBLISHED_DATA && Array.isArray(PUBLISHED_DATA.course)) {
+      course = PUBLISHED_DATA.course.map(normalizeStop);
+      safeWrite(COURSE_KEY, course);
+    } else if (Array.isArray(storedCourse)) {
       course = storedCourse.map(normalizeStop);
     } else if (PUBLISHED_DATA && Array.isArray(PUBLISHED_DATA.course)) {
       course = PUBLISHED_DATA.course.map(normalizeStop);
@@ -1692,7 +1706,8 @@
     return { name: String(raw.name || ''), on: raw.on !== false };
   }
 
-  // 어느 쪽이 최신인지 판단하려고 저장 시각을 같이 남긴다
+  // 어느 쪽이 최신인지 판단하려고 저장 시각을 같이 남긴다.
+  // 발행본에도 같은 성격의 시각(publishedAt)이 박히고, 더 큰 쪽이 이긴다.
   var localStamp = safeRead(STAMP_KEY) || 0;
 
   function touch() {
@@ -2868,7 +2883,8 @@
 
         // JSON 안의 '<' 를 이스케이프하지 않으면 가게 이름에 닫는 스크립트 태그가 섞였을 때
         // 브라우저가 거기서 스크립트를 끊어버린다
-        var json = JSON.stringify({ places: places, course: course })
+        // 발행 시각을 같이 박아, 이미 열어본 기기도 이 파일이 더 최신임을 알 수 있게 한다
+        var json = JSON.stringify({ places: places, course: course, publishedAt: Date.now() })
           .replace(/</g, '\\u003C');
 
         var baked = html.slice(0, a) + startTag +
