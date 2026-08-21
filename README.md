@@ -12,22 +12,20 @@
 2. Source 를 **Deploy from a branch**, 브랜치는 **main / (root)** 로 지정
 3. 몇 분 뒤 `https://<사용자이름>.github.io/date_invitation/` 으로 접속
 
-## 카카오톡 공유 버튼 켜기
+## 카카오톡 공유
 
-기본값에서는 카카오 버튼이 숨겨져 있고, 기본 공유 시트와 복사만 동작합니다.
+전송 화면에 **💬 카카오톡으로 보내기** 버튼이 뜹니다. 대화방만 고르면 끝입니다.
 
-1. [Kakao Developers](https://developers.kakao.com) 에서 애플리케이션 추가
-2. **앱 키 → JavaScript 키** 복사
-3. **플랫폼 → Web → 사이트 도메인**에 위 GitHub Pages 주소를 등록 (이걸 빼먹으면 동작하지 않습니다)
-4. `index.html` 안의 `KAKAO_JS_KEY` 에 JavaScript 키를 붙여넣기
+키는 `index.html` 의 `KAKAO_JS_KEY` 에 들어 있습니다. 브라우저에 실리도록 만들어진
+공개 키이고, Kakao Developers 에 등록한 도메인에서만 동작합니다.
+**Admin 키나 REST API 키는 절대 여기 넣으면 안 됩니다.**
 
-```js
-var KAKAO_JS_KEY = '여기에_JavaScript_키';
-```
+도메인을 바꾸면(사용자명 변경, 커스텀 도메인 등) Kakao Developers 의
+`플랫폼 > Web > 사이트 도메인` 에도 새 주소를 등록해야 합니다. 안 그러면 버튼을
+눌러도 아무 일이 일어나지 않습니다.
 
-SDK `<script>` 태그에는 `integrity` 속성이 들어있지 않습니다. 넣고 싶다면 Kakao Developers
-문서의 최신 스니펫에 적힌 값을 그대로 복사해 붙이세요. 값이 틀리면 SDK 가 통째로 차단되므로,
-직접 만들어 넣지 말고 문서의 값을 그대로 써야 합니다.
+카카오 SDK 를 못 불러오는 환경(인터넷 차단 등)에서는 버튼이 저절로 숨겨지고
+아래의 기본 공유·복사로 동작합니다.
 
 ## 맛집 관리
 
