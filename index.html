@@ -302,30 +302,6 @@
   }
 
   /* 장소 확인 화면 */
-  /* 간식 위치 고르기 목록 */
-  .when-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-bottom: 4px;
-  }
-  .when-item {
-    font-family: var(--font-body);
-    font-size: 16px;
-    padding: 13px 14px;
-    text-align: left;
-    border: var(--btn-border-width) solid var(--ink);
-    border-radius: var(--menu-radius);
-    background: var(--sage-soft);
-    color: var(--ink);
-    cursor: pointer;
-    box-shadow: var(--menu-shadow);
-    transition: transform 0.15s ease, background 0.2s ease;
-  }
-  .when-item:hover { transform: translateY(-2px); background: var(--rose-soft); }
-  .when-item:active { transform: scale(0.98); box-shadow: none; }
-  .when-item b { font-family: var(--font-display); }
-
   /* 장소 확인 화면의 큰 음식 사진. 사진이 있는 곳에서만 보인다. */
   .venue-photo {
     display: none;
@@ -1228,34 +1204,6 @@
   </div>
 </div>
 
-<!-- 2-1. 간식 메뉴 화면 (건너뛸 수 있음) -->
-<div id="screen-menu-snack" class="screen">
-  <div class="paper-card menu-card">
-    <div class="tape tape-left"></div>
-    <div class="tape tape-right"></div>
-    <h2 class="title-small">중간에 간식 어때요?</h2>
-    <p class="menu-notice">생략해도 괜찮아요 :)</p>
-    <div id="grid-snack" class="menu-grid"></div>
-    <div class="back-row">
-      <button id="btn-skip-snack" class="btn-text-back" type="button">간식은 건너뛸래요</button>
-    </div>
-  </div>
-</div>
-
-<!-- 2-1-1. 간식을 코스 어디에 넣을지 -->
-<div id="screen-snack-when" class="screen">
-  <div class="paper-card menu-card">
-    <div class="tape tape-left"></div>
-    <div class="tape tape-right"></div>
-    <h2 id="snack-when-title" class="title-small">간식은 언제 먹을까요?</h2>
-    <p class="menu-notice">코스 어디쯤에 넣을지 골라주세요</p>
-    <div id="snack-when-list" class="when-list"></div>
-    <div class="back-row">
-      <button id="btn-snack-when-back" class="btn-text-back" type="button">← 간식 다시 고르기</button>
-    </div>
-  </div>
-</div>
-
 <!-- 2-2. 저녁 메뉴 화면 -->
 <div id="screen-menu-dinner" class="screen">
   <div class="paper-card menu-card">
@@ -1565,8 +1513,12 @@
   // Supabase 동기화 설정. 비워두면 이 기기 안에서만 저장된다(예전 동작).
   // 여기 넣는 키는 공개용(publishable)이라 페이지에 그대로 실려도 되지만,
   // 정책을 열어 둔 만큼 주소를 아는 사람은 목록을 고칠 수 있다.
-  var SUPABASE_URL = 'https://wjqjebemglkitgrekzzz.supabase.co';
-  var SUPABASE_KEY = 'sb_publishable_oeP1ttfINWEBwByugOEfMw_-2GtROZz';
+  // 켜려면 아래 두 줄의 주석을 풀고 원래 줄을 지우세요.
+  // (먼저 docs/supabase.sql 의 정책 두 개를 실행해야 합니다)
+  // var SUPABASE_URL = 'https://wjqjebemglkitgrekzzz.supabase.co';
+  // var SUPABASE_KEY = 'sb_publishable_oeP1ttfINWEBwByugOEfMw_-2GtROZz';
+  var SUPABASE_URL = '';
+  var SUPABASE_KEY = '';
   var SUPABASE_ROW = 'main';
 
   var STORAGE_KEY = 'dateApp.places.v1';
@@ -1574,10 +1526,11 @@
   var COURSE_KEY = 'dateApp.course.v1';
 
   // 초대장 메뉴에 한 번에 노출할 최대 칸 수 (사진이 들어가는 격자라 너무 많으면 고르기 힘듦)
-  var SLOT_LIMIT = { lunch: 5, snack: 4, dinner: 4 };
+  var SLOT_LIMIT = { lunch: 5, dinner: 4 };
 
-  // 초대장 흐름에서 고르는 순서
-  var MEALS = ['lunch', 'snack', 'dinner'];
+  // 초대장 흐름에서 고르는 순서.
+  // 간식은 묻지 않는다. 넣고 싶을 때 '고정 코스'에 직접 넣는다.
+  var MEALS = ['lunch', 'dinner'];
 
   var DEFAULT_COURSE = ['다이소', '루루당', '커피집', '시장 (과일 사기)'];
 
@@ -1764,10 +1717,8 @@
     return null;
   }
 
-  // 저장된 값은 'etc' 지만 초대장에서는 '간식' 메뉴로 쓰인다.
   function servesMeal(place, meal) {
-    if (meal === 'snack') return place.meal === 'etc';
-    if (place.meal === 'etc') return false;
+    if (place.meal === 'etc') return false;   // 간식은 점심·저녁 메뉴에 오르지 않는다
     return place.meal === meal || place.meal === 'both';
   }
 
@@ -1811,7 +1762,7 @@
     var el = $('sync-state');
     if (!el) return;
     var text = {
-      off: '이 기기에만 저장돼요',
+      off: '',   // 동기화를 안 쓰면 굳이 알릴 게 없다 (:empty 규칙으로 숨겨진다)
       idle: '동기화 준비됨',
       syncing: '동기화 중…',
       ok: '동기화됨 · 다른 기기에서도 같은 목록이 보여요',
@@ -1889,8 +1840,6 @@
   var screens = {
     landing: $('screen-landing'),
     menuLunch: $('screen-menu-lunch'),
-    menuSnack: $('screen-menu-snack'),
-    snackWhen: $('screen-snack-when'),
     menuDinner: $('screen-menu-dinner'),
     venue: $('screen-venue'),
     review: $('screen-review'),
@@ -2004,7 +1953,7 @@
   // 주문(코스) 흐름
   // ===================================================================
 
-  var order = { lunch: null, snack: null, dinner: null };
+  var order = { lunch: null, dinner: null };
   var currentMeal = null;
   var pendingPlace = null;
 
@@ -2026,7 +1975,6 @@
   }
   function menuScreenFor(meal) {
     if (meal === 'lunch') return 'menuLunch';
-    if (meal === 'snack') return 'menuSnack';
     return 'menuDinner';
   }
 
@@ -2074,16 +2022,7 @@
     var items = [];
     items.push('점심: ' + (formatChoice(order.lunch) || '미정'));
 
-    var stops = activeCourseStops();
-    var hasSnack = order.snack && order.snack.type !== 'skip';
-    // 간식은 고른 자리에 끼워 넣는다. at=0 이면 점심 바로 뒤, at=n 이면 n번째 코스 뒤.
-    var at = hasSnack ? Math.min(Math.max(order.snack.at || 0, 0), stops.length) : -1;
-
-    stops.forEach(function (stop, i) {
-      if (hasSnack && at === i) items.push('간식: ' + formatChoice(order.snack));
-      items.push(stop);
-    });
-    if (hasSnack && at >= stops.length) items.push('간식: ' + formatChoice(order.snack));
+    activeCourseStops().forEach(function (stop) { items.push(stop); });
 
     if (order.dinner && order.dinner.type === 'skip') {
       items.push('저녁: 생략할게요');
@@ -2123,47 +2062,9 @@
     }
   }
 
-  // 간식은 코스 어디에 끼울지도 고른다 (예: 시장 들렀다가 먹기)
-  function renderSnackWhen() {
-    var list = $('snack-when-list');
-    var stops = activeCourseStops();
-    list.innerHTML = '';
-
-    $('snack-when-title').textContent =
-      formatChoice(order.snack).replace(/^\(의견\) /, '') + ', 언제 먹을까요?';
-
-    function addOption(label, index) {
-      var btn = document.createElement('button');
-      btn.className = 'when-item';
-      btn.type = 'button';
-      btn.innerHTML = label;
-      btn.addEventListener('click', function () {
-        order.snack.at = index;
-        currentMeal = 'snack';
-        goToNextMeal();
-      });
-      list.appendChild(btn);
-    }
-
-    addOption('점심 먹고 <b>바로</b>', 0);
-    stops.forEach(function (stop, i) {
-      addOption('<b>' + stop + '</b> 다음에', i + 1);
-    });
-  }
-
   function advanceAfterChoice() {
-    if (currentMeal === 'snack' && order.snack && order.snack.type !== 'skip') {
-      renderSnackWhen();
-      showScreen('snackWhen');
-      return;
-    }
     goToNextMeal();
   }
-
-  $('btn-snack-when-back').addEventListener('click', function () {
-    order.snack = null;
-    showScreen('menuSnack');
-  });
 
   $('btn-venue-yes').addEventListener('click', function () {
     order[currentMeal] = { type: 'venue', name: pendingPlace.name, id: pendingPlace.id };
@@ -2189,13 +2090,6 @@
 
   $('btn-etc-back').addEventListener('click', function () {
     showScreen(menuScreenFor(currentMeal));
-  });
-
-  // 간식은 넣을 수도 안 넣을 수도 있다
-  $('btn-skip-snack').addEventListener('click', function () {
-    currentMeal = 'snack';
-    order.snack = { type: 'skip' };
-    goToNextMeal();
   });
 
   $('btn-review-back').addEventListener('click', function () {
@@ -2264,17 +2158,17 @@
   var formPhotoInput = $('form-photo');
   var formPhotoPreview = $('form-photo-preview');
 
-  // 이 맛집이 차지하는 초대장 메뉴 칸들
+  // 이 맛집이 차지하는 초대장 메뉴 칸들.
+  // 간식은 초대장에서 묻지 않으므로 칸을 차지하지 않는다.
   function mealsOf(place) {
     if (place.meal === 'both') return ['lunch', 'dinner'];
-    if (place.meal === 'etc') return ['snack'];
+    if (place.meal === 'etc') return [];
     return [place.meal];
   }
 
   function slotUsage() {
     return {
       lunch: shownFor('lunch').length,
-      snack: shownFor('snack').length,
       dinner: shownFor('dinner').length
     };
   }
@@ -2284,7 +2178,6 @@
     $('slot-text').innerHTML =
       '초대장에 보이는 후보<br>' +
       '점심 <b>' + used.lunch + '/' + SLOT_LIMIT.lunch + '</b>' +
-      ' &nbsp;·&nbsp; 간식 <b>' + used.snack + '/' + SLOT_LIMIT.snack + '</b>' +
       ' &nbsp;·&nbsp; 저녁 <b>' + used.dinner + '/' + SLOT_LIMIT.dinner + '</b>';
   }
 
@@ -2302,11 +2195,12 @@
     places.forEach(function (p) { p.shown = false; });
 
     // '점심·저녁' 맛집은 두 칸을 동시에 차지하므로 끼니별로 따로 세면 한도를 넘는다
-    var used = { lunch: 0, snack: 0, dinner: 0 };
+    var used = { lunch: 0, dinner: 0 };
     MEALS.forEach(function (meal) {
       sortForPicking(pickablePool(meal)).forEach(function (place) {
         if (place.shown) return;
         var meals = mealsOf(place);
+        if (!meals.length) return;   // 간식은 뽑기 대상이 아니다
         var fits = meals.every(function (m) { return used[m] < SLOT_LIMIT[m]; });
         if (!fits) return;
         place.shown = true;
@@ -2328,6 +2222,7 @@
     } else {
       // 노출을 켤 때만 슬롯 한도를 검사한다 (끄는 건 언제나 허용)
       var meals = mealsOf(place);
+      if (!meals.length) return;   // 간식은 노출 칸이 없다
       var full = null;
       for (var i = 0; i < meals.length; i++) {
         if (shownFor(meals[i]).length >= SLOT_LIMIT[meals[i]]) { full = meals[i]; break; }
@@ -2365,6 +2260,7 @@
 
   function matchesFilter(place) {
     if (mealFilter === 'all') return true;
+    if (mealFilter === 'snack') return place.meal === 'etc';
     return mealsOf(place).indexOf(mealFilter) !== -1;
   }
 
@@ -2378,7 +2274,9 @@
       var key = btns[i].getAttribute('data-filter');
       var n = (key === 'all')
         ? inTab.length
-        : inTab.filter(function (p) { return mealsOf(p).indexOf(key) !== -1; }).length;
+        : inTab.filter(function (p) {
+            return key === 'snack' ? p.meal === 'etc' : mealsOf(p).indexOf(key) !== -1;
+          }).length;
 
       btns[i].classList.toggle('active', key === mealFilter);
       btns[i].innerHTML = btns[i].getAttribute('data-label') +
@@ -2490,13 +2388,16 @@
         actions.appendChild(againBtn);
       }
 
-      var sw = document.createElement('button');
-      sw.className = 'switch' + (place.shown ? ' on' : '');
-      sw.type = 'button';
-      sw.title = '초대장 메뉴에 노출';
-      if (place.visited && !place.revisit) sw.disabled = true;
-      sw.addEventListener('click', function () { toggleShown(place); });
-      actions.appendChild(sw);
+      // 간식은 초대장에서 묻지 않으므로 노출 스위치가 의미 없다
+      if (place.meal !== 'etc') {
+        var sw = document.createElement('button');
+        sw.className = 'switch' + (place.shown ? ' on' : '');
+        sw.type = 'button';
+        sw.title = '초대장 메뉴에 노출';
+        if (place.visited && !place.revisit) sw.disabled = true;
+        sw.addEventListener('click', function () { toggleShown(place); });
+        actions.appendChild(sw);
+      }
 
       var editBtn = document.createElement('button');
       editBtn.className = 'icon-btn icon-host';
@@ -2628,7 +2529,7 @@
       chips[i].classList.toggle('active', chips[i].getAttribute('data-meal') === meal);
     }
     $('form-meal-hint').textContent = (meal === 'etc')
-      ? '점심과 저녁 사이 간식 메뉴에 올라와요. 상대가 건너뛸 수도 있어요.'
+      ? '초대장에서는 묻지 않아요. 넣고 싶을 때 고정 코스에 직접 넣으면 돼요.'
       : '';
   }
 
@@ -2871,7 +2772,7 @@
   });
 
   function resetOrder() {
-    order = { lunch: null, snack: null, dinner: null };
+    order = { lunch: null, dinner: null };
     currentMeal = null;
     pendingPlace = null;
   }
