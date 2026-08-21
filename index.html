@@ -822,6 +822,43 @@
     margin: 0 0 14px;
     text-align: left;
   }
+  /* 미리보기 배너 */
+  .preview-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 9px 14px;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--font-body);
+    font-size: 13px;
+    z-index: 50;
+    box-shadow: 0 2px 6px rgba(91, 70, 54, 0.25);
+  }
+  .preview-bar.show { display: flex; }
+  .preview-bar b { font-family: var(--font-display); font-size: 15px; }
+  .btn-preview-exit {
+    font-family: var(--font-body);
+    font-size: 12px;
+    padding: 5px 11px;
+    border: 1px solid var(--paper);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--paper);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .btn-preview-exit:hover { background: var(--paper); color: var(--ink); }
+  /* 배너가 화면을 가리지 않도록 카드를 살짝 내린다 */
+  body.previewing .screen { padding-top: 62px; }
+  body.previewing .screen-scroll { padding-top: 66px; }
+
   .toast {
     position: fixed;
     left: 50%;
@@ -1062,6 +1099,9 @@
       </div>
     </div>
 
+    <button id="btn-preview" class="btn-mini" type="button"
+            style="width:100%; margin-top:18px;">👀 상대방 화면으로 미리보기</button>
+
     <div class="data-tools">
       <button id="btn-export" class="btn-mini" type="button">💾 내보내기</button>
       <button id="btn-import" class="btn-mini" type="button">📂 가져오기</button>
@@ -1069,6 +1109,11 @@
       <button id="btn-close-manage" class="btn-mini primary" type="button">닫기</button>
     </div>
   </div>
+</div>
+
+<div id="preview-bar" class="preview-bar">
+  <span><b>👀 미리보기</b> — 상대방에게 보이는 화면이에요. 눌러봐도 기록되지 않아요.</span>
+  <button id="btn-preview-exit" class="btn-preview-exit" type="button">미리보기 끝내기</button>
 </div>
 
 <div id="toast" class="toast"></div>
@@ -1458,6 +1503,9 @@
   var currentMeal = null;
   var pendingPlace = null;
 
+  // 미리보기 중에는 초대장 흐름을 그대로 돌아보되 아무것도 저장하지 않는다
+  var previewMode = false;
+
   var venueTitleEl = $('venue-title');
   var venueMapLink = $('venue-map-link');
   var etcTitleEl = $('etc-title');
@@ -1569,6 +1617,9 @@
 
   // 코스를 확정하면: 뽑힌 곳은 '가본 곳'으로, 후보였는데 안 뽑힌 곳은 패스 카운트 +1
   function commitOrderToPlaces() {
+    // 미리보기로 눌러본 것까지 다녀온 걸로 기록되면 안 된다
+    if (previewMode) return;
+
     ['lunch', 'dinner'].forEach(function (meal) {
       var choice = order[meal];
       var chosenId = (choice && choice.type === 'venue') ? choice.id : null;
@@ -1593,6 +1644,7 @@
     renderCourseList(finalCourseList, buildCourseList());
     resetShareButtons();
     showScreen('final');
+    if (previewMode) toast('여기까지가 상대방이 보는 화면이에요. 기록되지 않았어요.');
   });
 
   // ===================================================================
@@ -2049,6 +2101,36 @@
     showScreen('landing');
   });
 
+  function resetOrder() {
+    order = { lunch: null, dinner: null };
+    currentMeal = null;
+    pendingPlace = null;
+  }
+
+  function setPreviewMode(on) {
+    previewMode = on;
+    document.body.classList.toggle('previewing', on);
+    $('preview-bar').classList.toggle('show', on);
+  }
+
+  $('btn-preview').addEventListener('click', function () {
+    resetOrder();
+    resetShareButtons();
+    renderAllMenus();
+    setPreviewMode(true);
+    showScreen('landing');
+  });
+
+  $('btn-preview-exit').addEventListener('click', function () {
+    setPreviewMode(false);
+    resetOrder();
+    resetShareButtons();
+    renderPlaceList();
+    renderSlotBar();
+    showScreen('manage');
+    toast('미리보기를 끝냈어요. 아무것도 기록되지 않았어요 :)');
+  });
+
   // ---- 내보내기 / 가져오기 ----
   //
   // 기기마다 저장소가 따로라 둘이 같은 목록을 보려면 이 파일을 주고받아야 한다.
@@ -2272,9 +2354,7 @@
   }
 
   $('btn-restart').addEventListener('click', function () {
-    order = { lunch: null, dinner: null };
-    currentMeal = null;
-    pendingPlace = null;
+    resetOrder();
     resetShareButtons();
     if (location.hash) {
       history.replaceState(null, '', location.pathname + location.search);
@@ -2301,6 +2381,7 @@
   }
 
   loadData();
+  setPreviewMode(false);
   decorateStaticButtons();
   renderAllMenus();
   renderCourseManage();
