@@ -418,13 +418,154 @@
   #btn-auto-pick { width: 100%; }
   .slot-text b { font-family: var(--font-display); font-size: 15px; color: var(--rose-dark); }
 
-  /* ICONS 를 이미지/SVG 로 바꿨을 때의 공통 크기 */
+  /* ===== 애니메이션 아이콘 =====
+     itshover (https://github.com/itshover/itshover, Apache-2.0) 의 아이콘을
+     이 프로젝트에 맞춰 React/motion 없이 순수 SVG + CSS 로 옮긴 것.
+     원본이 motion 으로 주던 키프레임/지속시간을 그대로 재현했다. */
+
   .icon-img {
-    width: 1.1em;
-    height: 1.1em;
-    vertical-align: -0.15em;
+    width: 1.15em;
+    height: 1.15em;
+    vertical-align: -0.2em;
     display: inline-block;
-    object-fit: contain;
+    overflow: visible;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex: none;
+  }
+  /* 32 단위 뷰박스 아이콘은 선 두께를 환산해 맞춘다 */
+  .icon-img.icon-32 { stroke-width: 2.67; }
+
+  /* 아이콘은 자기 자신이 아니라 감싸는 버튼/링크에 hover 할 때 움직인다 */
+  .icon-host { }
+
+  /* --- 지도 핀: 가운데 점이 등대처럼 깜빡임 (0.6s, 무한) --- */
+  @keyframes ih-pin-dot {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.4; }
+  }
+  .icon-host:hover .ih-pin-dot { animation: ih-pin-dot 0.6s ease-in-out infinite; }
+
+  /* --- 돋보기: 훑어보듯 흔들림 (1s) --- */
+  @keyframes ih-magnifier {
+    0%   { transform: translate(0, 0)     rotate(0deg); }
+    25%  { transform: translate(1px, -1px)  rotate(-5deg); }
+    50%  { transform: translate(0, -2px)    rotate(5deg); }
+    75%  { transform: translate(-1px, -1px) rotate(-5deg); }
+    100% { transform: translate(0, 0)     rotate(0deg); }
+  }
+  .ih-magnifier { transform-origin: 13px 13px; transform-box: fill-box; }
+  .icon-host:hover .ih-magnifier { animation: ih-magnifier 1s ease-in-out; }
+
+  /* --- 국그릇: 김이 올라가고 그릇이 살짝 흔들림 --- */
+  @keyframes ih-steam {
+    0%   { transform: translateY(-2px); opacity: 1; }
+    100% { transform: translateY(-4px); opacity: 0; }
+  }
+  @keyframes ih-bowl {
+    0%, 100% { transform: rotate(0deg); }
+    33%      { transform: rotate(1deg); }
+    66%      { transform: rotate(-1deg); }
+  }
+  .ih-bowl { transform-origin: 12px 16px; }
+  .icon-host:hover .ih-steam { animation: ih-steam 0.8s ease-out 3; }
+  .icon-host:hover .ih-bowl  { animation: ih-bowl 0.4s ease-in-out; }
+
+  /* --- 펜: 밑줄 긋듯 위로 올라갔다 내려옴 (0.8s) --- */
+  @keyframes ih-pen {
+    0%   { transform: translate(0, 0)        rotate(0deg); }
+    20%  { transform: translate(1px, -2px)   rotate(-6deg); }
+    40%  { transform: translate(-1px, -4px)  rotate(-4deg); }
+    60%  { transform: translate(1px, -6px)   rotate(-6deg); }
+    80%  { transform: translate(-1px, -8px)  rotate(-4deg); }
+    100% { transform: translate(0, -10px)    rotate(0deg); }
+  }
+  /* 원본은 pathLength 로 선을 그린다. stroke-dasharray 로 같은 효과를 낸다. */
+  @keyframes ih-pen-slash {
+    0%   { stroke-dashoffset: 9; opacity: 0; }
+    35%  { stroke-dashoffset: 0; opacity: 1; }
+    75%  { stroke-dashoffset: 0; opacity: 1; }
+    100% { stroke-dashoffset: 9; opacity: 0; }
+  }
+  .ih-pen { transform-origin: 50% 50%; transform-box: fill-box; }
+  .ih-pen-slash { stroke-dasharray: 9; stroke-dashoffset: 9; opacity: 0; }
+  .icon-host:hover .ih-pen {
+    animation: ih-pen 0.8s ease-in-out, ih-pen 0.25s ease-in-out 0.8s reverse;
+  }
+  .icon-host:hover .ih-pen-slash { animation: ih-pen-slash 0.5s ease-out 0.8s; }
+
+  /* --- 하트: 두 번 두근 (0.6s) --- */
+  @keyframes ih-heart {
+    0%   { transform: scale(1); }
+    25%  { transform: scale(1.15); }
+    50%  { transform: scale(1); }
+    75%  { transform: scale(1.25); }
+    100% { transform: scale(1); }
+  }
+  .ih-heart { transform-origin: 12px 12px; transform-box: view-box; }
+  .icon-host:hover .ih-heart { animation: ih-heart 0.6s ease-out; }
+  /* 또 가고싶다가 켜진 상태는 하트를 채워서 표시 */
+  .icon-btn.is-on .ih-heart { fill: currentColor; }
+
+  /* --- 휴지통: 뚜껑 바와 손잡이가 서로 다른 각도로 열린다 --- */
+  @keyframes ih-trash-lid-lower {
+    to { transform: translateY(-4px) rotate(-25deg); }
+  }
+  @keyframes ih-trash-lid-upper {
+    to { transform: translate(-2px, -6px) rotate(-35deg); }
+  }
+  .ih-trash-lid-lower,
+  .ih-trash-lid-upper { transform-origin: 12px 24px; transform-box: view-box; }
+  .icon-host:hover .ih-trash-lid-lower { animation: ih-trash-lid-lower 0.25s ease-out forwards; }
+  .icon-host:hover .ih-trash-lid-upper { animation: ih-trash-lid-upper 0.25s ease-out forwards; }
+
+  /* --- 위 화살표: 톡 올라갔다 내려옴 (0.5s) --- */
+  @keyframes ih-arrow-up {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-4px); }
+  }
+  .icon-host:hover .ih-arrow-up { animation: ih-arrow-up 0.5s ease-in-out; }
+
+  /* --- 새로고침: 반 바퀴 회전 (0.4s) --- */
+  @keyframes ih-refresh {
+    0%   { transform: rotate(0deg); }
+    100% { transform: rotate(180deg); }
+  }
+  .ih-refresh { transform-origin: 12px 12px; transform-box: view-box; }
+  .icon-host:hover .ih-refresh { animation: ih-refresh 0.4s ease-in-out forwards; }
+
+  /* --- 내려받기: 화살표가 쟁반으로 떨어짐 (1s) --- */
+  @keyframes ih-download-arrow {
+    0%   { transform: translateY(0);    opacity: 1; }
+    30%  { transform: translateY(8px);  opacity: 0; }
+    50%  { transform: translateY(8px);  opacity: 0; }
+    70%  { transform: translateY(-8px); opacity: 0; }
+    100% { transform: translateY(0);    opacity: 1; }
+  }
+  @keyframes ih-download-tray {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50%      { transform: translateY(2px) scale(1.05); }
+  }
+  .ih-download-tray { transform-origin: center bottom; transform-box: fill-box; }
+  .ih-download-arrow { transform-origin: center; transform-box: fill-box; }
+  .icon-host:hover .ih-download-arrow { animation: ih-download-arrow 1s ease-in-out; }
+  .icon-host:hover .ih-download-tray  { animation: ih-download-tray 0.3s ease-out 0.25s; }
+
+  /* --- 올리기: 화살표가 위로 빠지고 아래에서 다시 올라옴 --- */
+  @keyframes ih-upload-arrow {
+    0%   { transform: translateY(0);    opacity: 1; }
+    45%  { transform: translateY(-12px); opacity: 0; }
+    50%  { transform: translateY(12px);  opacity: 0; }
+    100% { transform: translateY(0);    opacity: 1; }
+  }
+  .icon-host:hover .ih-upload-arrow { animation: ih-upload-arrow 0.85s ease-in-out; }
+
+  /* 움직임을 줄이도록 설정한 사용자에게는 애니메이션을 끈다 */
+  @media (prefers-reduced-motion: reduce) {
+    .icon-host:hover .icon-img * { animation: none !important; }
   }
   .btn-mini {
     font-family: var(--font-display);
@@ -440,6 +581,8 @@
     white-space: nowrap;
     transition: transform 0.15s ease, background 0.2s ease;
   }
+  .btn-mini { display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
+  .btn-mini .icon-img { vertical-align: 0; }
   .btn-mini:hover { transform: translateY(-1px); background: var(--rose-soft); }
   .btn-mini:active { transform: scale(0.96); box-shadow: none; }
   .btn-mini.primary { background: var(--rose); color: #fff; border-color: var(--rose-dark); }
@@ -474,8 +617,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 18px;
+    font-size: 20px;
+    color: var(--ink-soft);
   }
+  .place-thumb-empty .icon-img { vertical-align: 0; }
   .place-main { flex: 1; min-width: 0; }
   .place-name {
     font-family: var(--font-body);
@@ -504,7 +649,8 @@
   .chip-pass { background: var(--rose-soft); color: var(--rose-dark); font-weight: 700; }
   .chip-again { background: var(--rose); color: #fff; border-color: var(--rose-dark); }
   .chip-note { background: transparent; border-style: dashed; color: var(--ink-soft); }
-  .chip-link { text-decoration: none; }
+  .chip-link { text-decoration: none; display: inline-flex; align-items: center; gap: 3px; }
+  .chip-link .icon-img { vertical-align: 0; width: 13px; height: 13px; }
   .chip-link:hover { background: var(--rose-soft); }
 
   .place-actions {
@@ -516,16 +662,25 @@
   .icon-btn {
     width: 30px;
     height: 30px;
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
     border: 1px solid rgba(91, 70, 54, 0.3);
     border-radius: 9px;
     background: var(--paper);
     color: var(--ink-soft);
-    font-size: 14px;
+    font-size: 15px;
     line-height: 1;
     cursor: pointer;
     transition: background 0.2s ease, color 0.2s ease;
   }
   .icon-btn:hover { background: var(--rose-soft); color: var(--rose-dark); }
+  .icon-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  /* 또 가고싶다가 켜진 상태 */
+  .icon-btn.is-on { color: var(--rose-dark); border-color: var(--rose); background: var(--rose-soft); }
+  .icon-btn .icon-img { vertical-align: 0; }
 
   /* 노출 스위치 */
   .switch {
@@ -938,21 +1093,73 @@
   // 비워두면 카카오 버튼은 자동으로 숨겨지고, 기본 공유/복사만 사용합니다.
   var KAKAO_JS_KEY = '';
 
-  // 아이콘 모음 — itshover.com 등에서 받은 아이콘으로 바꾸려면 여기만 고치면 됩니다.
-  // 세 가지 형태를 모두 그대로 쓸 수 있어요.
-  //   1) 이모지          : '🗺'
-  //   2) 이미지 파일      : '<img class="icon-img" src="icons/map.svg" alt="">'
-  //   3) 인라인 SVG 코드  : '<svg class="icon-img" viewBox="0 0 24 24">...</svg>'
-  // 이미지를 쓸 땐 icons/ 폴더를 같이 올리고, class="icon-img" 를 붙여주세요.
+  // 아이콘 — itshover (https://github.com/itshover/itshover, Apache-2.0) 의 아이콘을
+  // React/motion 없이 순수 SVG + CSS 로 옮긴 것. 움직임은 위쪽 @keyframes 에 있고,
+  // 아이콘을 감싼 요소에 .icon-host 클래스가 있으면 hover 할 때 재생된다.
+  // 다른 아이콘으로 바꾸려면 여기 문자열만 교체하면 된다. 이모지도 그대로 쓸 수 있다.
+  var SVG_OPEN = '<svg class="icon-img" viewBox="0 0 24 24" aria-hidden="true">';
+  var SVG_OPEN_32 = '<svg class="icon-img icon-32" viewBox="0 0 32 32" aria-hidden="true">';
+
   var ICONS = {
-    map: '🗺',          // 지도 링크가 있을 때
-    mapSearch: '🔍',    // 지도 링크가 없어 검색으로 보낼 때
-    noPhoto: '🍽',      // 사진 없는 맛집 자리
-    edit: '✏️',         // 수정
-    again: '💗',        // 또 가고 싶음
-    againOff: '🤍',     // 또 가고 싶지 않음
-    trash: '🗑',        // 삭제
-    moveUp: '↑'         // 코스 순서 올리기
+    // 지도 핀 — 가운데 점이 등대처럼 깜빡인다
+    map: SVG_OPEN +
+      '<path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/>' +
+      '<circle class="ih-pin-dot" cx="12" cy="10" r="3"/></svg>',
+
+    // 돋보기 — 훑어보듯 흔들린다
+    mapSearch: SVG_OPEN_32 +
+      '<g class="ih-magnifier">' +
+      '<path d="m21.393,18.565l7.021,7.021c.781.781.781,2.047,0,2.828h0c-.781.781-2.047.781-2.828,0l-7.021-7.021"/>' +
+      '<circle cx="13" cy="13" r="10"/></g></svg>',
+
+    // 국그릇 — 김이 올라가고 그릇이 살짝 흔들린다
+    noPhoto: SVG_OPEN +
+      '<g class="ih-bowl">' +
+      '<path d="M12 21a9 9 0 0 0 9-9H3a9 9 0 0 0 9 9Z"/>' +
+      '<path d="M7 21h10"/><path d="M19.5 12 22 6"/></g>' +
+      '<g class="ih-steam">' +
+      '<path d="M16.25 3c.27.1.8.53.75 1.36-.06.83-.93 1.2-1 2.02-.05.78.34 1.24.73 1.62"/>' +
+      '<path d="M11.25 3c.27.1.8.53.74 1.36-.05.83-.93 1.2-.98 2.02-.06.78.33 1.24.72 1.62"/>' +
+      '<path d="M6.25 3c.27.1.8.53.75 1.36-.06.83-.93 1.2-1 2.02-.05.78.34 1.24.74 1.62"/>' +
+      '</g></svg>',
+
+    // 펜 — 위로 올라가며 밑줄을 긋는다
+    edit: SVG_OPEN_32 +
+      '<path class="ih-pen-slash" d="M20 6 L26 12"/>' +
+      '<path class="ih-pen" d="m10.5,27.5l-8,2 2-8L22.257,3.743c1.657-1.657,4.343-1.657,6,0s1.657,4.343,0,6L10.5,27.5Z"/>' +
+      '</svg>',
+
+    // 하트 — 두 번 두근거린다 (켜진 상태는 .is-on 이 채워준다)
+    again: SVG_OPEN +
+      '<path class="ih-heart" d="M19.5 12.572l-7.5 7.428l-7.5 -7.428a5 5 0 1 1 7.5 -6.566a5 5 0 1 1 7.5 6.572"/></svg>',
+
+    // 휴지통 — 뚜껑이 열린다
+    trash: SVG_OPEN +
+      '<path class="ih-trash-lid-lower" d="M4 7l16 0"/>' +
+      '<path d="M10 11l0 6"/><path d="M14 11l0 6"/>' +
+      '<path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/>' +
+      '<path class="ih-trash-lid-upper" d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"/></svg>',
+
+    // 위 화살표 — 톡 올라갔다 내려온다
+    moveUp: SVG_OPEN +
+      '<g class="ih-arrow-up"><path d="M12 5l0 14"/><path d="M16 9l-4 -4"/><path d="M8 9l4 -4"/></g></svg>',
+
+    // 새로고침 — 반 바퀴 돈다 (이번 후보 다시 뽑기)
+    shuffle: SVG_OPEN +
+      '<g class="ih-refresh">' +
+      '<path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4"/>' +
+      '<path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"/></g></svg>',
+
+    // 내려받기 — 화살표가 쟁반으로 떨어진다
+    download: SVG_OPEN +
+      '<path class="ih-download-tray" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>' +
+      '<path class="ih-download-arrow" d="M12 15V3"/>' +
+      '<path class="ih-download-arrow" d="m7 10 5 5 5-5"/></svg>',
+
+    // 올리기 — 화살표가 위로 빠졌다 아래에서 다시 올라온다
+    upload: SVG_OPEN +
+      '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>' +
+      '<g class="ih-upload-arrow"><path d="M12 3v12"/><path d="m17 8-5-5-5 5"/></g></svg>'
   };
 
   var STORAGE_KEY = 'dateApp.places.v1';
@@ -1517,7 +1724,7 @@
         row.appendChild(img);
       } else {
         var ph = document.createElement('div');
-        ph.className = 'place-thumb-empty';
+        ph.className = 'place-thumb-empty icon-host';
         setIcon(ph, 'noPhoto');
         row.appendChild(ph);
       }
@@ -1546,7 +1753,7 @@
       }
 
       var mapChip = document.createElement('a');
-      mapChip.className = 'chip chip-link';
+      mapChip.className = 'chip chip-link icon-host';
       mapChip.href = place.mapUrl || naverSearchUrl(place.name);
       mapChip.target = '_blank';
       mapChip.rel = 'noopener noreferrer';
@@ -1564,10 +1771,11 @@
       if (place.visited) {
         // 가본 곳은 '또 가고싶다' 토글이 곧 후보 자격이다
         var againBtn = document.createElement('button');
-        againBtn.className = 'icon-btn';
+        againBtn.className = 'icon-btn icon-host' + (place.revisit ? ' is-on' : '');
         againBtn.type = 'button';
-        setIcon(againBtn, place.revisit ? 'again' : 'againOff');
-        againBtn.title = '또 가고 싶은지';
+        setIcon(againBtn, 'again');
+        againBtn.title = place.revisit ? '또 가고 싶어요' : '또 가고 싶지 않아요';
+        againBtn.setAttribute('aria-pressed', place.revisit ? 'true' : 'false');
         againBtn.addEventListener('click', function () {
           place.revisit = !place.revisit;
           if (!place.revisit) place.shown = false;
@@ -1588,10 +1796,11 @@
       actions.appendChild(sw);
 
       var editBtn = document.createElement('button');
-      editBtn.className = 'icon-btn';
+      editBtn.className = 'icon-btn icon-host';
       editBtn.type = 'button';
       setIcon(editBtn, 'edit');
       editBtn.title = '수정';
+      editBtn.setAttribute('aria-label', place.name + ' 수정');
       editBtn.addEventListener('click', function () { openForm(place); });
       actions.appendChild(editBtn);
 
@@ -1620,10 +1829,11 @@
       actions.className = 'place-actions';
 
       var upBtn = document.createElement('button');
-      upBtn.className = 'icon-btn';
+      upBtn.className = 'icon-btn icon-host';
       upBtn.type = 'button';
       setIcon(upBtn, 'moveUp');
       upBtn.title = '위로';
+      upBtn.setAttribute('aria-label', stop.name + ' 위로 옮기기');
       upBtn.disabled = index === 0;
       upBtn.addEventListener('click', function () {
         var tmp = course[index - 1];
@@ -1646,10 +1856,11 @@
       actions.appendChild(sw);
 
       var delBtn = document.createElement('button');
-      delBtn.className = 'icon-btn';
+      delBtn.className = 'icon-btn icon-host';
       delBtn.type = 'button';
       setIcon(delBtn, 'trash');
       delBtn.title = '삭제';
+      delBtn.setAttribute('aria-label', stop.name + ' 삭제');
       delBtn.addEventListener('click', function () {
         if (!confirm('"' + stop.name + '" 을(를) 코스에서 뺄까요?')) return;
         course.splice(index, 1);
@@ -2075,7 +2286,22 @@
   // 시작
   // ===================================================================
 
+  // HTML 에 이모지로 적혀 있는 버튼들도 같은 아이콘 세트로 맞춘다
+  function decorateStaticButtons() {
+    [
+      ['btn-auto-pick', 'shuffle', '이번 후보 뽑기'],
+      ['btn-export', 'download', '내보내기'],
+      ['btn-import', 'upload', '가져오기']
+    ].forEach(function (entry) {
+      var el = $(entry[0]);
+      if (!el) return;
+      el.classList.add('icon-host');
+      el.innerHTML = ICONS[entry[1]] + ' ' + entry[2];
+    });
+  }
+
   loadData();
+  decorateStaticButtons();
   renderAllMenus();
   renderCourseManage();
   resetShareButtons();

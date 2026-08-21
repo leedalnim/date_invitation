@@ -53,21 +53,64 @@ var SLOT_LIMIT = { lunch: 5, dinner: 4 };
 
 사진은 200×200 JPEG 로 줄여서 저장하지만, 너무 많이 넣으면 저장 공간이 찰 수 있습니다.
 
-## 아이콘 바꾸기
+## 아이콘
 
-아이콘은 `index.html` 상단 `ICONS` 객체 한 곳에 모여 있습니다. 이모지 / 이미지 / 인라인 SVG 전부 됩니다.
+[itshover](https://github.com/itshover/itshover) 의 애니메이션 아이콘을 사용합니다.
+원본은 React + `motion` 기반이라 이 프로젝트(빌드 도구 없는 단일 HTML)에 그대로 넣을 수 없어,
+**같은 SVG 경로와 같은 키프레임을 유지한 채 순수 CSS `@keyframes` 로 옮겼습니다.**
+
+| 쓰이는 곳 | 원본 아이콘 | 움직임 |
+| --- | --- | --- |
+| 지도 링크 | `map-pin-icon` | 가운데 점이 등대처럼 깜빡임 |
+| 지도에서 찾기 | `magnifier-icon` | 훑어보듯 흔들림 |
+| 사진 없는 자리 | `soup-icon` | 김이 올라가고 그릇이 흔들림 |
+| 수정 | `pen-icon` | 위로 올라가며 밑줄을 그음 |
+| 또 가고싶다 | `heart-icon` | 두 번 두근거림 |
+| 삭제 | `trash-icon` | 뚜껑이 열림 |
+| 코스 순서 올리기 | `arrow-narrow-up-icon` | 톡 올라갔다 내려옴 |
+| 이번 후보 뽑기 | `refresh-icon` | 반 바퀴 회전 |
+| 내보내기 | `download-icon` | 화살표가 쟁반으로 떨어짐 |
+| 가져오기 | `upload-icon` | 화살표가 위로 빠졌다 다시 올라옴 |
+
+### 동작 방식
+
+애니메이션은 아이콘 자신이 아니라 **감싸는 요소의 hover** 로 재생됩니다.
+버튼이나 링크에 `icon-host` 클래스를 붙이면 그 안의 아이콘이 움직입니다.
+
+```html
+<button class="icon-btn icon-host">
+  <svg class="icon-img" viewBox="0 0 24 24">…</svg>
+</button>
+```
+
+`prefers-reduced-motion` 을 켠 사용자에게는 애니메이션이 자동으로 꺼집니다.
+
+### 아이콘 추가·교체하기
+
+SVG 마크업은 `index.html` 상단 `ICONS` 객체에, 움직임은 그 위 `@keyframes ih-*` 에 있습니다.
+
+1. [itshover.com](https://itshover.com) 에서 원하는 아이콘의 **Manual** 탭을 열거나,
+   [저장소](https://github.com/itshover/itshover/tree/main/icons) 의 `.tsx` 파일을 봅니다.
+2. `<motion.svg>` 안의 `path` / `circle` / `g` 를 그대로 `ICONS` 에 문자열로 옮깁니다.
+   24 단위 뷰박스는 `SVG_OPEN`, 32 단위는 `SVG_OPEN_32` 를 씁니다.
+3. `animate(...)` 의 키프레임과 `duration` 을 CSS `@keyframes` + `animation` 으로 옮깁니다.
+   `transformOrigin` / `transformBox` 값도 같이 옮겨야 회전축이 맞습니다.
+
+이모지나 이미지 파일을 그대로 넣어도 됩니다.
 
 ```js
 var ICONS = {
   map: '🗺',
-  edit: '<img class="icon-img" src="icons/edit.svg" alt="">',
-  trash: '<svg class="icon-img" viewBox="0 0 24 24">...</svg>'
+  edit: '<img class="icon-img" src="icons/edit.svg" alt="">'
 };
 ```
 
-`npx shadcn@latest add https://itshover.com/r/<icon>.json` 으로 받은 항목은 React 컴포넌트라
-이 프로젝트에 그대로 넣을 수 없습니다. 받은 파일에서 `<svg>...</svg>` 부분만 꺼내
-위처럼 문자열로 붙여넣고 `class="icon-img"` 를 추가하면 크기가 맞춰집니다.
+### 라이선스
+
+itshover 아이콘은 **Apache License 2.0** 입니다
+(저장소 `LICENSE` 파일 기준. README 본문에는 MIT 로 적힌 줄이 있으나 `LICENSE` 는 Apache-2.0 입니다).
+이 프로젝트는 원본 아이콘을 **React/motion 에서 순수 SVG + CSS 로 변환해 사용**하며,
+출처와 라이선스는 `index.html` 의 아이콘 정의부 주석에도 함께 남겨두었습니다.
 
 ## 코스 공유 링크
 
