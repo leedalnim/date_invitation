@@ -512,6 +512,23 @@
   .tab-btn:hover { transform: translateY(-1px); }
   .tab-btn.active { background: var(--rose); color: #fff; border-color: var(--rose-dark); }
 
+  /* 동기화 상태 */
+  .sync-state {
+    font-family: var(--font-body);
+    font-size: 12.5px;
+    line-height: 1.5;
+    text-align: center;
+    margin: 0 0 12px;
+    padding: 7px 10px;
+    border-radius: 10px;
+    color: var(--ink-soft);
+    background: var(--cream);
+    border: 1px dashed rgba(91, 70, 54, 0.25);
+  }
+  .sync-state:empty { display: none; }
+  .sync-ok { color: var(--sage); border-color: var(--sage); background: var(--sage-soft); }
+  .sync-error { color: var(--rose-dark); border-color: var(--rose-dark); background: var(--rose-soft); }
+
   /* 분류 필터 — 위쪽 큰 탭과 구분되도록 작고 둥글게 */
   .filter-row { display: flex; gap: 6px; margin-bottom: 14px; }
   .filter-btn {
@@ -1336,6 +1353,8 @@
 
     <!-- 가볼 곳 / 가본 곳 공통 영역 -->
     <div id="pane-places">
+      <p id="sync-state" class="sync-state sync-off"></p>
+
       <div id="meal-filter" class="filter-row">
         <button class="filter-btn active" data-filter="all" type="button">전체</button>
         <button class="filter-btn" data-filter="lunch" type="button">점심</button>
@@ -1543,7 +1562,15 @@
   /* PUBLISHED_DATA_END */
   // ↑↑↑
 
+  // Supabase 동기화 설정. 비워두면 이 기기 안에서만 저장된다(예전 동작).
+  // 여기 넣는 키는 공개용(publishable)이라 페이지에 그대로 실려도 되지만,
+  // 정책을 열어 둔 만큼 주소를 아는 사람은 목록을 고칠 수 있다.
+  var SUPABASE_URL = '';
+  var SUPABASE_KEY = '';
+  var SUPABASE_ROW = 'main';
+
   var STORAGE_KEY = 'dateApp.places.v1';
+  var STAMP_KEY = 'dateApp.updatedAt.v1';
   var COURSE_KEY = 'dateApp.course.v1';
 
   // 초대장 메뉴에 한 번에 노출할 최대 칸 수 (사진이 들어가는 격자라 너무 많으면 고르기 힘듦)
@@ -1688,11 +1715,13 @@
     } else if (PUBLISHED_DATA && PUBLISHED_DATA.places && PUBLISHED_DATA.places.length) {
       // 이 기기에서 처음 여는 사람(= 초대받은 상대)은 발행할 때 구워 넣은 목록을 본다
       places = PUBLISHED_DATA.places.map(normalizePlace);
-      savePlaces();
+      safeWrite(STORAGE_KEY, places);   // 시각은 올리지 않는다 (아래 주석 참고)
     } else {
       places = seedFromTemplates();
-      savePlaces();
+      safeWrite(STORAGE_KEY, places);
     }
+    // 시딩은 '내가 방금 고친 것'이 아니다. 여기서 저장 시각을 올리면 새로 연 기기가
+    // 자기 기본값을 최신으로 여겨 서버에 있는 진짜 목록을 덮어써 버린다.
 
     // 빈 배열도 '사용자가 전부 지운 상태'로 존중한다 (length 검사를 하면 기본값이 되살아난다)
     var storedCourse = safeRead(COURSE_KEY);
@@ -1710,8 +1739,23 @@
     return { name: String(raw.name || ''), on: raw.on !== false };
   }
 
-  function savePlaces() { safeWrite(STORAGE_KEY, places); }
-  function saveCourse() { safeWrite(COURSE_KEY, course); }
+  // 어느 쪽이 최신인지 판단하려고 저장 시각을 같이 남긴다
+  var localStamp = safeRead(STAMP_KEY) || 0;
+
+  function touch() {
+    localStamp = Date.now();
+    safeWrite(STAMP_KEY, localStamp);
+    schedulePush();
+  }
+
+  function savePlaces() { safeWrite(STORAGE_KEY, places); touch(); }
+  function saveCourse() { safeWrite(COURSE_KEY, course); touch(); }
+
+  // 저장 시각을 건드리지 않는 조용한 저장 (원격에서 받아온 것을 적을 때)
+  function saveQuiet() {
+    safeWrite(STORAGE_KEY, places);
+    safeWrite(COURSE_KEY, course);
+  }
 
   function placeById(id) {
     for (var i = 0; i < places.length; i++) {
@@ -1739,6 +1783,103 @@
     return places.filter(function (p) {
       return servesMeal(p, meal) && (!p.visited || p.revisit);
     });
+  }
+
+  // ===================================================================
+  // Supabase 동기화
+  // ===================================================================
+  //
+  // 목록 전체를 JSON 한 덩어리로 주고받는다. 늘 이 기기의 저장분으로 먼저 그리고,
+  // 원격이 더 최신이면 그때 갈아끼운다. 연결이 안 되면 조용히 이 기기 것만 쓴다.
+
+  var syncOn = !!(SUPABASE_URL && SUPABASE_KEY);
+  var pushTimer = null;
+  var syncState = syncOn ? 'idle' : 'off';   // off | idle | syncing | ok | error
+
+  function syncHeaders(extra) {
+    var h = {
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_KEY,
+      'Content-Type': 'application/json'
+    };
+    if (extra) Object.keys(extra).forEach(function (k) { h[k] = extra[k]; });
+    return h;
+  }
+
+  function setSyncState(next) {
+    syncState = next;
+    var el = $('sync-state');
+    if (!el) return;
+    var text = {
+      off: '이 기기에만 저장돼요',
+      idle: '동기화 준비됨',
+      syncing: '동기화 중…',
+      ok: '동기화됨 · 다른 기기에서도 같은 목록이 보여요',
+      error: '연결이 안 돼요. 이 기기에만 저장 중이에요'
+    }[next] || '';
+    el.textContent = text;
+    el.className = 'sync-state sync-' + next;
+  }
+
+  function pullRemote() {
+    if (!syncOn) return Promise.resolve(false);
+    setSyncState('syncing');
+
+    return fetch(SUPABASE_URL + '/rest/v1/date_app_state?id=eq.' +
+                 encodeURIComponent(SUPABASE_ROW) + '&select=data,updated_at',
+                 { headers: syncHeaders(), cache: 'no-store' })
+      .then(function (res) {
+        if (!res.ok) throw new Error('http ' + res.status);
+        return res.json();
+      })
+      .then(function (rows) {
+        var row = rows && rows[0];
+        if (!row || !row.data) { setSyncState('ok'); return false; }
+
+        var remoteStamp = row.data.updatedAt || Date.parse(row.updated_at) || 0;
+        if (remoteStamp <= localStamp) { setSyncState('ok'); return false; }
+
+        // 원격이 더 최신이다. 이 기기 것을 갈아끼운다.
+        if (Array.isArray(row.data.places)) places = row.data.places.map(normalizePlace);
+        if (Array.isArray(row.data.course)) course = row.data.course.map(normalizeStop);
+        localStamp = remoteStamp;
+        safeWrite(STAMP_KEY, localStamp);
+        saveQuiet();
+        setSyncState('ok');
+        return true;
+      })
+      .catch(function () { setSyncState('error'); return false; });
+  }
+
+  function pushRemote() {
+    if (!syncOn) return Promise.resolve();
+    setSyncState('syncing');
+
+    var body = [{
+      id: SUPABASE_ROW,
+      data: { places: places, course: course, updatedAt: localStamp },
+      updated_at: new Date(localStamp).toISOString()
+    }];
+
+    return fetch(SUPABASE_URL + '/rest/v1/date_app_state',
+                 { method: 'POST',
+                   headers: syncHeaders({ 'Prefer': 'resolution=merge-duplicates,return=minimal' }),
+                   body: JSON.stringify(body) })
+      .then(function (res) {
+        if (!res.ok) throw new Error('http ' + res.status);
+        setSyncState('ok');
+      })
+      .catch(function () { setSyncState('error'); });
+  }
+
+  // 스위치를 여러 번 누르는 동안 매번 보내지 않도록 잠깐 모았다 보낸다
+  function schedulePush() {
+    if (!syncOn) return;
+    if (pushTimer) clearTimeout(pushTimer);
+    pushTimer = setTimeout(function () {
+      pushTimer = null;
+      pushRemote();
+    }, 800);
   }
 
   // ===================================================================
@@ -3113,6 +3254,21 @@
   showShareWarning();
   initKakao();
   window.addEventListener('load', initKakao); // SDK 가 늦게 도착하는 경우 대비
+
+  // 이 기기 저장분으로 먼저 그린 뒤, 원격이 더 최신이면 갈아끼운다
+  setSyncState(syncOn ? 'idle' : 'off');
+  if (syncOn) {
+    pullRemote().then(function (changed) {
+      if (!changed) return;
+      renderAllMenus();
+      renderCourseManage();
+      if (screens.manage.classList.contains('active')) {
+        renderMealFilter();
+        renderPlaceList();
+        renderSlotBar();
+      }
+    });
+  }
   // 첫 화면도 showScreen 을 거치게 한다. 그래야 하단 버튼 같은 화면별 상태가 맞춰진다.
   if (!restoreFromUrl()) showScreen('landing');
 })();
